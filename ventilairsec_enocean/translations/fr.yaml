@@ -1,0 +1,25 @@
+configuration:
+  serial_port:
+    name: Port de la clé EnOcean
+    description: Chemin stable de la clé, de préférence /dev/serial/by-id/... (Paramètres → Système → Matériel).
+  vmi_id:
+    name: Identifiant de la VMI
+    description: ID EnOcean de la VMI, 8 caractères hexadécimaux (logicalId dans la sauvegarde Jeedom).
+  assistant_id:
+    name: Identifiant de l'Assistant
+    description: ID EnOcean de l'Assistant (sonde d'ambiance). Laisser vide s'il n'y en a pas.
+  sender_id:
+    name: Identifiant d'émission
+    description: ID utilisé pour envoyer les commandes. Vide = Base ID de la clé. Voir la documentation (actionid de Jeedom).
+  force_base_id:
+    name: Forcer le Base ID
+    description: Écrit ce Base ID dans la clé au démarrage. 10 écritures maximum sur la durée de vie de la clé ! Remettre à vide ensuite.
+  sync_clock:
+    name: Synchroniser l'horloge
+    description: Envoie l'heure à la VMI au démarrage puis toutes les heures (elle la perd à chaque coupure de courant).
+  topic_prefix:
+    name: Préfixe MQTT
+    description: Début des topics MQTT publiés.
+  log_level:
+    name: Niveau de journal
+    description: debug affiche toutes les trames radio brutes.

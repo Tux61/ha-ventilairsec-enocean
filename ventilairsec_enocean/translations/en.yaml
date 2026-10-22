@@ -1,0 +1,25 @@
+configuration:
+  serial_port:
+    name: EnOcean stick port
+    description: Stable path of the stick, preferably /dev/serial/by-id/... (Settings → System → Hardware).
+  vmi_id:
+    name: Ventilation unit ID
+    description: EnOcean ID of the PureVent unit, 8 hex characters (logicalId in the Jeedom backup).
+  assistant_id:
+    name: Assistant ID
+    description: EnOcean ID of the Assistant (room sensor). Leave empty if you have none.
+  sender_id:
+    name: Sender ID
+    description: ID used to send commands. Empty = Base ID of the stick. See the documentation (Jeedom actionid).
+  force_base_id:
+    name: Force Base ID
+    description: Writes this Base ID to the stick at startup. Only 10 writes over the stick's lifetime! Clear it afterwards.
+  sync_clock:
+    name: Clock sync
+    description: Sends the time to the unit at startup and every hour (it loses it on every power cut).
+  topic_prefix:
+    name: MQTT prefix
+    description: Prefix of the published MQTT topics.
+  log_level:
+    name: Log level
+    description: debug shows every raw radio telegram.
