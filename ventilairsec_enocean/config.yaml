@@ -1,5 +1,5 @@
 name: Ventilairsec VMI EnOcean
-version: "1.1.0"
+version: "1.1.1"
 slug: ventilairsec_enocean
 description: Pilotage d'une VMI Ventilairsec PureVent via une clé EnOcean (TCM310) et MQTT, sans Jeedom
 url: https://github.com/Tux61/ha-ventilairsec-enocean

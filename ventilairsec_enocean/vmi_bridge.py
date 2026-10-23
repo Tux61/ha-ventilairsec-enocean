@@ -124,6 +124,9 @@ class ESP3:
 
     def read_base_id(self):
         resp = self._send(PT_COMMON_COMMAND, [CO_RD_IDBASE])
+        if resp is None:
+            # Juste après l'ouverture du port (ser2net), la première commande peut se perdre
+            resp = self._send(PT_COMMON_COMMAND, [CO_RD_IDBASE])
         if not resp or resp[0][0] != 0 or len(resp[0]) < 5:
             raise RuntimeError("Lecture du Base ID impossible (réponse %r)" % (resp,))
         data, opt = resp

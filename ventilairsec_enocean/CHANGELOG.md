@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+- Lecture du Base ID réessayée une fois sans réponse : juste après l'ouverture du
+  port par ser2net, la première commande peut se perdre. Le retour sur le port
+  principal ne prend plus 5 minutes de trop après un redémarrage de la passerelle.
+
 ## 1.1.0
 
 - `serial_port` accepte `socket://IP:port` : module EnOcean partagé sur le réseau par
