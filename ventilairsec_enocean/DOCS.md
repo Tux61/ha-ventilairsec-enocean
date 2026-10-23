@@ -10,9 +10,11 @@ installation : utilisez-le en connaissance de cause.
 
 ## Prérequis
 
-- Une clé EnOcean USB à puce TCM310 (USB 300 ou équivalent). Si votre ancien Jeedom
-  utilisait déjà une clé USB, reprenez-la : la VMI lui obéit en général sans autre réglage. Le
-  module de la VMI Link Box, lui, n'est pas réutilisable (voir *Venir d'une VMI Link Box*).
+- Un module EnOcean à puce TCM310 :
+  - soit une clé USB (USB 300 ou équivalent). Si votre ancien Jeedom utilisait déjà une
+    clé USB, reprenez-la : la VMI lui obéit en général sans autre réglage ;
+  - soit un module partagé sur le réseau avec ser2net, par exemple celui d'une VMI Link
+    Box (voir *La Link Box comme antenne réseau*).
 - Un broker MQTT : l'add-on *Mosquitto broker* et l'intégration *MQTT* de Home Assistant.
 - **Ne pas** configurer l'intégration EnOcean native de Home Assistant sur cette clé :
   un seul programme peut ouvrir le port série. Si Home Assistant la propose en
@@ -22,9 +24,15 @@ installation : utilisez-le en connaissance de cause.
 ## Venir d'une VMI Link Box
 
 Dans la VMI Link Box, le module radio (EnOcean TCM310) est soudé sur une carte
-branchée sur le connecteur GPIO du boîtier (Rock Pi 4C). Il n'est pas utilisable
-depuis Home Assistant : il faut une clé EnOcean USB (USB 300 ou équivalent, à puce
-TCM310).
+branchée sur le connecteur GPIO du boîtier (Rock Pi 4C). Home Assistant ne peut pas
+l'utiliser directement. Deux solutions :
+
+- **Garder la Link Box comme antenne réseau** : elle partage son module sur le réseau
+  et l'add-on s'y connecte (voir *La Link Box comme antenne réseau*). La VMI est déjà
+  appairée avec ce module : rien à réappairer, et la Link Box peut être placée près de
+  la VMI pour un meilleur signal.
+- **Utiliser une clé EnOcean USB** (USB 300 ou équivalent, à puce TCM310) branchée
+  sur Home Assistant, et débrancher la Link Box. Suivez alors les étapes ci-dessous.
 
 La VMI reste appairée à l'identifiant d'émission de la Link Box. Pour que la clé USB
 soit obéie sans réappairer la VMI, donnez-lui le Base ID de la Link Box :
@@ -37,7 +45,68 @@ soit obéie sans réappairer la VMI, donnez-lui le Base ID de la Link Box :
    `force_base_id` à vide** (voir *Option `force_base_id`*).
 
 Débranchez ou éteignez ensuite la Link Box : deux émetteurs avec le même identifiant
-se gêneraient.
+se gêneraient. Vous pouvez aussi combiner les deux solutions : la Link Box comme port
+principal et la clé USB en secours (option `fallback_port`). Les deux ont alors le
+même Base ID, mais seul l'add-on les fait émettre, et toujours une seule à la fois.
+
+## La Link Box comme antenne réseau
+
+Testé sur une Link Box sous Armbian 21.05 (Debian 10), module sur `/dev/ttyS2`. Les
+commandes se tapent en SSH sur la Link Box, en root.
+
+1. **Relever le port du module** dans Jeedom : *Plugins → EnOcean → Configuration*
+   (par exemple `Jeedom Atlas (/dev/ttyS2)`), puis **désactiver le plugin EnOcean**
+   (*Plugins → Gestion des plugins*) pour qu'il libère le port.
+2. **Installer ser2net.** Les dépôts de Debian 10 sont archivés et `apt` ne fonctionne
+   plus en l'état ; récupérez le paquet directement :
+
+   ```sh
+   wget http://archive.debian.org/debian/pool/main/s/ser2net/ser2net_3.5-2_arm64.deb
+   dpkg -i ser2net_3.5-2_arm64.deb
+   systemctl stop ser2net
+   ```
+
+3. **Le configurer** : remplacez le contenu de `/etc/ser2net.conf` par cette seule
+   ligne (la configuration d'origine ouvre d'autres ports série sur le réseau) :
+
+   ```
+   3333:raw:0:/dev/ttyS2:57600 8DATABITS NONE 1STOPBIT
+   ```
+
+   Puis limitez l'accès à Home Assistant (remplacez l'adresse par la sienne) :
+
+   ```sh
+   echo "ser2net: 192.168.1.10" >> /etc/hosts.allow
+   echo "ser2net: ALL" >> /etc/hosts.deny
+   systemctl start ser2net
+   ```
+
+4. **Dans l'add-on**, mettez `serial_port` à `socket://IP-de-la-Link-Box:3333`, et
+   laissez `sender_id` et `force_base_id` vides : le Base ID est déjà celui avec lequel
+   la VMI a été appairée. Le journal doit afficher
+   `Clé EnOcean OK sur socket://... - Base ID ...`.
+5. **Donner une adresse fixe** à la Link Box (bail statique sur la box internet), car
+   l'add-on s'y connecte par son adresse.
+
+Pour la placer près de la VMI, connectez-la au Wi-Fi (le mot de passe est demandé) :
+
+```sh
+nmcli --ask dev wifi connect "Nom-du-réseau" ifname wlan0
+```
+
+Précautions :
+
+- **Arrêtez-la toujours proprement** (`poweroff`) avant de la débrancher. L'image
+  d'origine retarde les écritures sur le disque de 10 minutes (`commit=600` dans
+  `/etc/fstab`) : une coupure peut effacer une configuration récente, par exemple le
+  profil Wi-Fi. Retirer `commit=600` de `/etc/fstab` supprime ce risque.
+- Le système de la Link Box (Debian 10) ne reçoit plus de mises à jour de sécurité :
+  gardez-la sur le réseau local. Une fois le module partagé, vous pouvez désactiver
+  Jeedom (`apache2`, `mariadb`, `mosquitto`) et son accès à distance (`openvpn`,
+  tâches `/etc/cron.d/jeedom*`).
+- Si la Link Box est injoignable, Home Assistant ne voit plus la VMI (elle continue de
+  fonctionner seule, dans son dernier mode). Une clé USB en `fallback_port` prend le
+  relais.
 
 ## Trouver ses identifiants dans une sauvegarde Jeedom
 
@@ -78,7 +147,8 @@ les 10 minutes).
 
 | Option | Rôle |
 |---|---|
-| `serial_port` | Port de la clé, de préférence `/dev/serial/by-id/...` (*Paramètres → Système → Matériel*). |
+| `serial_port` | Port de la clé, de préférence `/dev/serial/by-id/...` (*Paramètres → Système → Matériel*), ou `socket://IP:port` pour un module partagé sur le réseau. |
+| `fallback_port` | Port de secours, facultatif (voir *Port de secours*). |
 | `vmi_id` | ID EnOcean de la VMI. |
 | `assistant_id` | ID de l'Assistant (vide pour l'ignorer). |
 | `sender_id` | ID d'émission des commandes. Vide = Base ID de la clé (comportement de Jeedom). |
@@ -86,6 +156,18 @@ les 10 minutes).
 | `sync_clock` | Envoie l'heure à la VMI au démarrage puis toutes les heures. Elle n'a pas de pile et revient en 2018 à chaque coupure de courant. |
 | `topic_prefix` | Préfixe des topics MQTT. |
 | `log_level` | `debug` affiche toutes les trames radio brutes. |
+
+## Port de secours
+
+Avec `fallback_port` renseigné (une clé USB, ou un autre `socket://`), l'add-on bascule
+sur ce port après trois connexions ratées sur `serial_port` (environ 30 secondes). Le
+capteur *Problème clé EnOcean* reste alors levé, avec la raison dans *Incident clé
+EnOcean*. Toutes les 5 minutes, l'add-on vérifie si le port principal répond de
+nouveau et y revient tout seul ; l'alerte retombe 30 minutes après.
+
+Pour que la VMI obéisse aux deux, donnez-leur le même Base ID (voir `force_base_id`)
+et laissez `sender_id` vide. En mode réseau, l'add-on se reconnecte aussi après
+10 minutes sans aucune donnée.
 
 ## Si les mesures arrivent mais que les commandes sont sans effet
 

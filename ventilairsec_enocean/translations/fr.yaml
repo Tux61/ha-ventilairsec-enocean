@@ -1,7 +1,10 @@
 configuration:
   serial_port:
     name: Port de la clé EnOcean
-    description: Chemin stable de la clé, de préférence /dev/serial/by-id/... (Paramètres → Système → Matériel).
+    description: Chemin stable de la clé, de préférence /dev/serial/by-id/... (Paramètres → Système → Matériel), ou socket://IP:port pour un module partagé sur le réseau (ser2net).
+  fallback_port:
+    name: Port de secours
+    description: Facultatif. Second port (clé USB ou socket://IP:port) utilisé si le premier ne répond plus ; retour automatique sur le premier dès qu'il répond.
   vmi_id:
     name: Identifiant de la VMI
     description: ID EnOcean de la VMI, 8 caractères hexadécimaux (logicalId dans la sauvegarde Jeedom).

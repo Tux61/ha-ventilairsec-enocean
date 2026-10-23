@@ -6,9 +6,11 @@ EnOcean, sans Jeedom. Il s'adresse notamment aux propriétaires d'une **VMI Link
 Assistant ne connaît pas le profil propriétaire Ventilairsec (MSC D1-079).
 
 L'add-on lit et décode les trames de la VMI et de son Assistant (sonde d'ambiance)
-reçues par une clé EnOcean USB (TCM310). Il les publie dans Home Assistant par MQTT
-et renvoie les commandes : mode, boost, vacances, surventilation, consignes de
-préchauffage, remise à zéro du filtre, heure.
+reçues par une clé EnOcean USB (TCM310), ou par le module de la Link Box partagé sur
+le réseau (la Link Box devient alors une antenne placée près de la VMI). Il les publie
+dans Home Assistant par MQTT et renvoie les commandes : mode, boost, vacances,
+surventilation, consignes de préchauffage, remise à zéro du filtre, heure. Un second
+port peut servir de secours automatique.
 
 > Projet indépendant, non affilié à Ventilairsec ni à Jeedom SAS. Testé sur une seule
 > installation (PureVent avec Hydro'R et Assistant). Retours bienvenus.
@@ -29,8 +31,10 @@ dans l'onglet *Documentation* de l'add-on.
 
 Home Assistant add-on for **Ventilairsec PureVent** ventilation units over EnOcean
 (proprietary MSC D1-079 profile), replacing the Jeedom `openenocean` / `ventilairsec`
-plugins (e.g. the *VMI Link Box*). It needs a TCM310 USB stick and an MQTT broker,
-and exposes sensors and controls through MQTT discovery. Documentation is in French.
+plugins (e.g. the *VMI Link Box*). It needs a TCM310 module (USB stick, or a module
+shared over the network with ser2net, such as the Link Box's own) and an MQTT broker,
+and exposes sensors and controls through MQTT discovery. An optional fallback port
+takes over automatically. Documentation is in French.
 
 ## Licence
 

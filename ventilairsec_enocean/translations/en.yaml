@@ -1,7 +1,10 @@
 configuration:
   serial_port:
     name: EnOcean stick port
-    description: Stable path of the stick, preferably /dev/serial/by-id/... (Settings → System → Hardware).
+    description: Stable path of the stick, preferably /dev/serial/by-id/... (Settings → System → Hardware), or socket://IP:port for a module shared over the network (ser2net).
+  fallback_port:
+    name: Fallback port
+    description: Optional. Second port (USB stick or socket://IP:port) used when the first one stops answering; switches back automatically once it answers again.
   vmi_id:
     name: Ventilation unit ID
     description: EnOcean ID of the PureVent unit, 8 hex characters (logicalId in the Jeedom backup).

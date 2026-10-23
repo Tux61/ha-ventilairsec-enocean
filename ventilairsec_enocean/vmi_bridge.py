@@ -42,6 +42,13 @@ MANUFACTURER = 0x079
 # Le signal radio passe à « indisponible » après 30 min sans trame (VMI : une trame par minute
 # environ, Assistant : toutes les 10 min) : un silence radio se voit comme un trou dans les graphiques.
 RSSI_EXPIRE = 1800
+# Port réseau (socket://) : reconnexion après ce silence, une connexion TCP coupée
+# sans fermeture (passerelle redémarrée) ne lève aucune erreur
+SOCKET_SILENCE = 600
+# Port de secours (fallback_port) : bascule après ECHECS_REPLI connexions ratées,
+# puis essai du port principal toutes les SONDE_PRINCIPAL secondes
+ECHECS_REPLI = 3
+SONDE_PRINCIPAL = 300
 
 
 def crc8(data):
@@ -69,7 +76,8 @@ class ESP3:
         self.on_radio = None
 
     def open(self):
-        self.ser = serial.Serial(self.port, 57600, timeout=0.2)
+        # serial_for_url accepte aussi socket://hôte:port (passerelle ser2net)
+        self.ser = serial.serial_for_url(self.port, 57600, timeout=0.2)
         self.buf.clear()
 
     def close(self):
@@ -79,6 +87,26 @@ class ESP3:
             except Exception:
                 pass
         self.ser = None
+
+    @classmethod
+    def sonder(cls, port):
+        """Vérifie qu'un port répond (lecture du Base ID), sans le garder ouvert."""
+        esp = cls(port)
+        stop = threading.Event()
+        reader = None
+        try:
+            esp.open()
+            reader = threading.Thread(target=esp.read_loop, args=(stop,), daemon=True)
+            reader.start()
+            return esp.read_base_id()[0]
+        except Exception as exc:
+            log.debug("Port %s toujours indisponible : %s", port, exc)
+            return None
+        finally:
+            stop.set()
+            if reader:
+                reader.join(1)
+            esp.close()
 
     def _send(self, ptype, data, optional=b"", timeout=2.0):
         if self.ser is None:
@@ -122,12 +150,18 @@ class ESP3:
         return True
 
     def read_loop(self, stop):
+        network = self.port.startswith("socket://")
+        last_data = time.time()
         try:
             while not stop.is_set():
                 chunk = self.ser.read(64)
                 if chunk:
+                    last_data = time.time()
                     self.buf.extend(chunk)
                     self._parse()
+                elif network and time.time() - last_data > SOCKET_SILENCE:
+                    log.warning("Aucune donnée de %s depuis %d min, reconnexion", self.port, SOCKET_SILENCE // 60)
+                    return
         except Exception as exc:
             log.error("Erreur de lecture série : %s", exc)
 
@@ -403,8 +437,12 @@ class Bridge:
         self.prefix = opts.get("topic_prefix", "ventilairsec").strip("/")
         self.vmi_id = opts["vmi_id"].upper()
         self.assistant_id = (opts.get("assistant_id") or "").upper()
-        self.sender_id = (opts.get("sender_id") or "").upper()
-        self.esp = ESP3(opts["serial_port"])
+        self.sender_opt = (opts.get("sender_id") or "").upper()
+        self.sender_id = self.sender_opt
+        self.ports = [opts["serial_port"]]
+        if opts.get("fallback_port"):
+            self.ports.append(opts["fallback_port"])
+        self.esp = ESP3(self.ports[0])
         self.esp.on_radio = self.on_radio
         self.state = {}
         self.chains = {}
@@ -738,10 +776,14 @@ class Bridge:
         self.mqtt.connect_async(host, port, keepalive=60)
         self.mqtt.loop_start()
         echecs = 0
+        actif = 0  # index dans self.ports : 0 = port principal, 1 = port de secours
         while not self.stop.is_set():
+            self.esp.port = self.ports[actif]
+            fin = threading.Event()  # arrête la lecture de cette connexion seulement
+            reader = None
             try:
                 self.esp.open()
-                reader = threading.Thread(target=self.esp.read_loop, args=(self.stop,), daemon=True)
+                reader = threading.Thread(target=self.esp.read_loop, args=(fin,), daemon=True)
                 reader.start()
                 base_id, remaining = self.esp.read_base_id()
                 log.info("Clé EnOcean OK sur %s - Base ID %s (changements restants : %s)",
@@ -753,25 +795,48 @@ class Bridge:
                     self.esp.write_base_id(wanted)
                     base_id, remaining = self.esp.read_base_id()
                     log.warning("Nouveau Base ID %s (changements restants : %s)", base_id, remaining)
-                if not self.sender_id:
-                    self.sender_id = base_id
+                # Sans sender_id, chaque clé émet avec son propre Base ID
+                self.sender_id = self.sender_opt or base_id
                 log.info("Identifiant d'émission utilisé : %s", self.sender_id)
                 last_clock = 0
+                last_sonde = time.time()
                 while reader.is_alive() and not self.stop.is_set():
                     if self.opts.get("sync_clock", True) and time.time() - last_clock > 3600:
                         last_clock = time.time()
                         self.send_clock()
+                    if actif:
+                        # Sur le port de secours : l'alerte reste levée, et on guette le retour du principal
+                        self.dernier_incident = time.time()
+                        if time.time() - last_sonde > SONDE_PRINCIPAL:
+                            last_sonde = time.time()
+                            if ESP3.sonder(self.ports[0]):
+                                log.warning("Le port principal %s répond de nouveau, retour dessus", self.ports[0])
+                                actif = 0
+                                break
                     self.fin_incident()
                     reader.join(5)
-                log.error("Lecture série interrompue")
+                else:
+                    log.error("Lecture série interrompue")
             except Exception as exc:
                 log.error("Erreur clé EnOcean (%s) : %s", self.esp.port, exc)
                 echecs += 1
-                if echecs == 3:
-                    self.incident("La clé ne répond pas au démarrage : elle est peut-être utilisée par un autre "
-                                  "programme (intégration EnOcean native de Home Assistant ?) ou débranchée")
+                if echecs == ECHECS_REPLI:
+                    echecs = 0
+                    if len(self.ports) > 1:
+                        actif = 1 - actif
+                        self.incident("%s ne répond plus : bascule sur %s" % (self.ports[1 - actif], self.ports[actif]))
+                    elif self.esp.port.startswith("socket://"):
+                        self.incident("La passerelle réseau %s ne répond pas" % self.esp.port)
+                    else:
+                        self.incident("La clé ne répond pas au démarrage : elle est peut-être utilisée par un autre "
+                                      "programme (intégration EnOcean native de Home Assistant ?) ou débranchée")
             finally:
+                fin.set()
+                if reader:
+                    reader.join(1)
                 self.esp.close()
+            if self.ports[actif] != self.esp.port:
+                continue  # changement de port : pas d'attente
             self.stop.wait(10)
 
 
