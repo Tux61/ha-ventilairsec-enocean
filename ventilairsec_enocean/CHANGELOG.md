@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2
+
+- Les espaces avant ou après une valeur (souvent ramenées par un copier-coller) sont
+  acceptées et retirées : elles bloquaient l'enregistrement des identifiants et
+  faussaient les ports.
+
 ## 1.1.1
 
 - Lecture du Base ID réessayée une fois sans réponse : juste après l'ouverture du

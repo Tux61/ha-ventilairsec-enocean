@@ -847,6 +847,8 @@ def main():
     path = sys.argv[1] if len(sys.argv) > 1 else "/data/options.json"
     with open(path) as fh:
         opts = json.load(fh)
+    # Espaces souvent ramenées par un copier-coller dans l'onglet Configuration
+    opts = {k: v.strip() if isinstance(v, str) else v for k, v in opts.items()}
     logging.basicConfig(level=getattr(logging, opts.get("log_level", "info").upper()),
                         format="%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
     if not opts.get("vmi_id") or not opts.get("serial_port"):
