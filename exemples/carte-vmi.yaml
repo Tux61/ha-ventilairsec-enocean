@@ -578,6 +578,7 @@ cards:
         name: Température max soufflage
       - type: divider
       - entity: sensor.vmi_ventilairsec_saison
+        name: Saison
       - entity: sensor.vmi_ventilairsec_puissance_prechauffage
         name: Puissance préchauffage
       - entity: sensor.vmi_ventilairsec_semaines_depuis_maintenance

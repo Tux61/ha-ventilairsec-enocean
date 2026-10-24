@@ -332,7 +332,8 @@ applique son propre planning interne.
 ## Carte de tableau de bord
 
 Le dossier `exemples` du dépôt contient une carte prête à coller (mode, boutons
-Eco / Standard / Confort, défauts, actions rapides, graphiques). Les graphiques
+Eco / Standard / Confort, défauts, actions rapides, graphiques) :
+[aperçu](https://raw.githubusercontent.com/Tux61/ha-ventilairsec-enocean/main/images/onglet-clair.png). Les graphiques
 demandent les cartes `mini-graph-card` et `apexcharts-card` (HACS). Les noms
 d'entités peuvent différer chez vous selon la langue et les renommages.
 

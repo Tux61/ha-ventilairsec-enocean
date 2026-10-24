@@ -16,6 +16,15 @@ port peut servir de secours automatique.
 > Projet indépendant, non affilié à Ventilairsec ni à Jeedom SAS. Testé sur une seule
 > installation (PureVent avec Hydro'R et Assistant). Retours bienvenus.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/apercu-sombre.png">
+  <img alt="Carte VMI dans Home Assistant : mode, état, débit, températures, commandes et graphiques" src="images/apercu-clair.png" width="800">
+</picture>
+
+Carte d'exemple fournie dans [exemples/carte-vmi.yaml](exemples/carte-vmi.yaml) ;
+voir l'[onglet complet](images/onglet-clair.png) (signal radio, filtre, humidité,
+réglages).
+
 ## Installation
 
 [![Ajouter le dépôt à Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https://github.com/Tux61/ha-ventilairsec-enocean)
