@@ -4,7 +4,7 @@
 Le protocole radio est celui du profil propriétaire MSC D1-079 (fabricant 0x079),
 tel qu'implémenté par les plugins Jeedom openenocean / ventilairsec (Jeedom SAS, GPL v3+).
 
-Copyright (C) 2026 les contributeurs de ce projet.
+Copyright (C) 2026 Tux61 et les contributeurs de ce projet.
 Ce programme est un logiciel libre : vous pouvez le redistribuer et/ou le modifier
 selon les termes de la GNU General Public License publiée par la Free Software
 Foundation, version 3 ou (à votre choix) toute version ultérieure. Il est distribué
