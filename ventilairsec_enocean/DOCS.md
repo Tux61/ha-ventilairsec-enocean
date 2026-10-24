@@ -331,9 +331,15 @@ applique son propre planning interne.
 
 ## Carte de tableau de bord
 
-Le dossier `exemples` du dépôt contient une carte prête à coller (mode, boutons
+Le dossier `exemples` du dépôt contient deux exemples prêts à coller (mode, boutons
 Eco / Standard / Confort, défauts, actions rapides, graphiques) :
-[aperçu](https://raw.githubusercontent.com/Tux61/ha-ventilairsec-enocean/main/images/onglet-clair.png). Les graphiques
+
+- `vue-vmi.yaml` : une vue complète en deux colonnes, pilotage à gauche et graphiques
+  à droite, empilées sur téléphone
+  ([aperçu](https://raw.githubusercontent.com/Tux61/ha-ventilairsec-enocean/main/images/onglet-clair.png)).
+  Dans le tableau de bord : *Modifier → ajouter une vue → ⋮ → Modifier en YAML*.
+- `carte-vmi.yaml` : les mêmes cartes en une seule colonne, à ajouter dans une vue
+  existante (carte *Manuel*). Les graphiques
 demandent les cartes `mini-graph-card` et `apexcharts-card` (HACS). Les noms
 d'entités peuvent différer chez vous selon la langue et les renommages.
 

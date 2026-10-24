@@ -21,9 +21,9 @@ port peut servir de secours automatique.
   <img alt="Carte VMI dans Home Assistant : mode, état, débit, températures, commandes et graphiques" src="images/apercu-clair.png" width="800">
 </picture>
 
-Carte d'exemple fournie dans [exemples/carte-vmi.yaml](exemples/carte-vmi.yaml) ;
-voir l'[onglet complet](images/onglet-clair.png) (signal radio, filtre, humidité,
-réglages).
+Exemples fournis : une vue complète en deux colonnes,
+[exemples/vue-vmi.yaml](exemples/vue-vmi.yaml) (voir la [vue entière](images/onglet-clair.png)),
+ou les mêmes cartes en une seule colonne, [exemples/carte-vmi.yaml](exemples/carte-vmi.yaml).
 
 ## Installation
 
