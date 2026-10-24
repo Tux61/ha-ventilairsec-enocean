@@ -14,7 +14,8 @@ installation : utilisez-le en connaissance de cause.
   - soit une clé USB (USB 300 ou équivalent). Si votre ancien Jeedom utilisait déjà une
     clé USB, reprenez-la : la VMI lui obéit en général sans autre réglage ;
   - soit un module partagé sur le réseau avec ser2net, par exemple celui d'une VMI Link
-    Box (voir *La Link Box comme antenne réseau*).
+    Box, d'origine ou équipée d'un Raspberry Pi (voir *La Link Box comme antenne
+    réseau*).
 - Un broker MQTT : l'add-on *Mosquitto broker* et l'intégration *MQTT* de Home Assistant.
 - **Ne pas** configurer l'intégration EnOcean native de Home Assistant sur cette clé :
   un seul programme peut ouvrir le port série. Si Home Assistant la propose en
@@ -23,14 +24,16 @@ installation : utilisez-le en connaissance de cause.
 
 ## Venir d'une VMI Link Box
 
-Dans la VMI Link Box, le module radio (EnOcean TCM310) est soudé sur une carte
-branchée sur le connecteur GPIO du boîtier (Rock Pi 4C). Home Assistant ne peut pas
+Dans la VMI Link Box, le module radio (EnOcean TCM310) est soudé sur une petite carte
+enfichée sur le connecteur GPIO de l'ordinateur du boîtier (Rock Pi 4C). Home Assistant ne peut pas
 l'utiliser directement. Deux solutions :
 
 - **Garder la Link Box comme antenne réseau** : elle partage son module sur le réseau
   et l'add-on s'y connecte (voir *La Link Box comme antenne réseau*). La VMI est déjà
   appairée avec ce module : rien à réappairer, et la Link Box peut être placée près de
-  la VMI pour un meilleur signal.
+  la VMI pour un meilleur signal. Son système d'origine n'étant plus mis à jour, sa
+  carte peut être remplacée par un Raspberry Pi (voir *Remplacer la carte de la Link
+  Box par un Raspberry Pi*).
 - **Utiliser une clé EnOcean USB** (USB 300 ou équivalent, à puce TCM310) branchée
   sur Home Assistant, et débrancher la Link Box. Suivez alors les étapes ci-dessous.
 
@@ -107,6 +110,96 @@ Précautions :
 - Si la Link Box est injoignable, Home Assistant ne voit plus la VMI (elle continue de
   fonctionner seule, dans son dernier mode). Une clé USB en `fallback_port` prend le
   relais.
+
+## Remplacer la carte de la Link Box par un Raspberry Pi
+
+Le système d'origine de la Link Box n'est plus mis à jour. Le module radio n'est pas
+soudé sur la Rock Pi 4C : c'est une petite carte (EnOcean Pi) enfichée sur son
+connecteur 40 broches. Une carte Raspberry Pi a le même format et le même connecteur :
+elle prend la place de la Rock Pi dans le boîtier, avec un système à jour. Le module
+garde son Base ID : rien à réappairer.
+
+Testé avec un Raspberry Pi 2 modèle B et Raspberry Pi OS Lite 32 bits (Debian 13).
+Un Pi 3 ou 4 convient aussi (voir l'étape 2).
+
+1. **Préparer la carte microSD** avec Raspberry Pi Imager : Raspberry Pi OS Lite,
+   et dans les réglages, le nom d'hôte, le Wi-Fi (pays FR) et SSH par clé. Le Pi 2
+   n'a pas de Wi-Fi : ajoutez une clé USB Wi-Fi reconnue sans pilote à installer
+   (testé : TP-Link TL-WN725N, puce RTL8188EUS).
+2. **Libérer le port série du connecteur** (broches 8 et 10), sur la partition de
+   démarrage de la carte :
+   - dans `config.txt`, ajoutez `enable_uart=1` à la fin ;
+   - dans `cmdline.txt`, retirez `console=serial0,115200` (la console occuperait le
+     port) ;
+   - **Pi 3 ou 4 seulement** : ajoutez aussi `dtoverlay=disable-bt` dans `config.txt`
+     (le Bluetooth utilise ce port), puis, une fois le Pi démarré,
+     `systemctl disable hciuart`.
+
+   Le module est alors sur `/dev/ttyAMA0`.
+3. **Monter le Raspberry Pi dans le boîtier** à la place de la Rock Pi (Link Box
+   arrêtée par `poweroff` puis débranchée). Le module EnOcean Pi se pique sur les
+   26 premières broches, sa broche 1 sur la broche 1 du Pi. Son antenne reste
+   reliée à la prise du boîtier. Alimentez le Pi avec son propre bloc
+   (micro-USB 5 V / 2 A pour un Pi 2).
+4. **Installer ser2net et le pare-feu**, en SSH sur le Pi, en root :
+
+   ```sh
+   apt update && apt install -y ser2net nftables unattended-upgrades
+   ```
+
+   Remplacez le contenu de `/etc/ser2net.yaml` par :
+
+   ```yaml
+   connection: &enocean
+     accepter: tcp,3333
+     enable: on
+     connector: serialdev,/dev/ttyAMA0,57600n81,local
+     options:
+       kickolduser: true
+   ```
+
+   Avec `kickolduser`, une nouvelle connexion remplace l'ancienne : l'add-on reprend
+   la main tout seul après une coupure. En contrepartie, un test du port 3333 depuis
+   un autre appareil déconnecte l'add-on.
+
+   Limitez l'accès à Home Assistant dans `/etc/nftables.conf` (remplacez l'adresse
+   par la sienne) :
+
+   ```
+   #!/usr/sbin/nft -f
+   flush ruleset
+   table inet filtre {
+     chain entree {
+       type filter hook input priority 0; policy accept;
+       tcp dport 3333 ip saddr != 192.168.1.10 drop
+       tcp dport 3333 meta nfproto ipv6 drop
+     }
+   }
+   ```
+
+   ```sh
+   systemctl enable --now nftables
+   systemctl restart ser2net
+   ```
+
+5. **Adresse fixe** : réservez l'adresse du Pi sur la box internet (bail statique),
+   ou fixez-la dans son profil Wi-Fi.
+6. **Wi-Fi qui revient tout seul** : par défaut, NetworkManager abandonne après
+   quelques échecs, par exemple pendant le redémarrage d'un point d'accès, et le Pi
+   reste alors hors ligne jusqu'à son propre redémarrage. Pour qu'il réessaie sans
+   fin :
+
+   ```sh
+   nmcli -t -f NAME con show            # nom du profil Wi-Fi
+   nmcli con mod "nom-du-profil" connection.autoconnect-retries 0
+   ```
+
+7. **Dans l'add-on**, mettez `serial_port` à `socket://IP-du-Pi:3333`. Une clé USB
+   en `fallback_port` reste conseillée.
+
+Comme pour la Link Box d'origine, arrêtez le Pi par `poweroff` avant de le
+débrancher. Les mises à jour de sécurité s'installent seules
+(`unattended-upgrades`).
 
 ## Trouver ses identifiants dans une sauvegarde Jeedom
 
