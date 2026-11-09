@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+- Nouvelles options `mqtt_host`, `mqtt_port`, `mqtt_user` et `mqtt_password` : broker
+  MQTT externe, par exemple un Mosquitto sur un autre serveur. Vides, l'add-on utilise
+  comme avant le broker fourni par Home Assistant, dont l'add-on *Mosquitto broker*
+  n'est plus obligatoire.
+
 ## 1.1.2
 
 - Les espaces avant ou après une valeur (souvent ramenées par un copier-coller) sont
