@@ -291,8 +291,8 @@ ni l'effet de ses commandes.
 
 1. Laissez `accept_pairing` activé (par défaut) et l'add-on démarré.
 2. Coupez la VMI au disjoncteur une dizaine de secondes, puis remettez le courant. Elle
-   passe en mode appairage et diffuse une demande d'appairage (trame UTE) par minute ;
-   certaines VMI restent ensuite dans ce mode en permanence, sans conséquence.
+   passe en mode appairage et diffuse une demande d'appairage (trame UTE) par minute,
+   pendant plusieurs heures (6 h sur une PureVent en logiciel 3.7), sans conséquence.
 3. L'add-on répond aussitôt « appairage accepté » depuis son identifiant d'émission :
    ligne « Demande d'appairage de la VMI : réponse… » dans le journal. La VMI envoie
    alors tout son état à l'add-on, et les entités se remplissent.

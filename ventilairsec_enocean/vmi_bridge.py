@@ -41,7 +41,7 @@ RORG_UTE = 0xD4  # demande d'appairage (une VMI restée en mode appairage en dif
 MANUFACTURER = 0x079
 # Réponse aux demandes d'appairage de la VMI (accept_pairing) : au plus une par intervalle, et
 # seulement si la VMI n'a rien adressé à l'add-on depuis UTE_SILENCE (appairée, elle lui écrit au
-# moins toutes les 10 min ; certaines restent pourtant en mode appairage et répètent leur demande)
+# moins toutes les 10 min, mais reste en mode appairage plusieurs heures et répète sa demande)
 UTE_INTERVALLE = 600
 UTE_SILENCE = 900
 # Le signal radio passe à « indisponible » après 30 min sans trame (VMI : une trame par minute
