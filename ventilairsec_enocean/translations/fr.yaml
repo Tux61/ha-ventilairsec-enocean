@@ -26,3 +26,15 @@ configuration:
   log_level:
     name: Niveau de journal
     description: debug affiche toutes les trames radio brutes.
+  mqtt_host:
+    name: Broker MQTT externe
+    description: Facultatif. Adresse d'un broker hors Home Assistant (ex. 192.168.1.20). Vide = broker fourni par Home Assistant (add-on Mosquitto).
+  mqtt_port:
+    name: Port du broker externe
+    description: Port du broker externe (1883 par défaut). Ignoré sans broker externe.
+  mqtt_user:
+    name: Utilisateur MQTT
+    description: Utilisateur du broker externe. Vide = connexion anonyme.
+  mqtt_password:
+    name: Mot de passe MQTT
+    description: Mot de passe du broker externe.

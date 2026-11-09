@@ -16,7 +16,8 @@ installation : utilisez-le en connaissance de cause.
   - soit un module partagé sur le réseau avec ser2net, par exemple celui d'une VMI Link
     Box, d'origine ou équipée d'un Raspberry Pi (voir *La Link Box comme antenne
     réseau*).
-- Un broker MQTT : l'add-on *Mosquitto broker* et l'intégration *MQTT* de Home Assistant.
+- Un broker MQTT et l'intégration *MQTT* de Home Assistant : l'add-on *Mosquitto broker*,
+  ou un broker externe (voir les options `mqtt_*`).
 - **Ne pas** configurer l'intégration EnOcean native de Home Assistant sur cette clé :
   un seul programme peut ouvrir le port série. Si Home Assistant la propose en
   découverte, choisissez *Ignorer*. Si les deux se disputent la clé, l'add-on reçoit
@@ -249,6 +250,9 @@ les 10 minutes).
 | `sync_clock` | Envoie l'heure à la VMI au démarrage puis toutes les heures. Elle n'a pas de pile et revient en 2018 à chaque coupure de courant. |
 | `topic_prefix` | Préfixe des topics MQTT. |
 | `log_level` | `debug` affiche toutes les trames radio brutes. |
+| `mqtt_host` | Broker MQTT externe (hors Home Assistant), par exemple `192.168.1.20`. Vide = broker de l'add-on *Mosquitto broker*. |
+| `mqtt_port` | Port du broker externe (1883 par défaut). |
+| `mqtt_user`, `mqtt_password` | Identifiants du broker externe. Vides = connexion anonyme. |
 
 ## Port de secours
 

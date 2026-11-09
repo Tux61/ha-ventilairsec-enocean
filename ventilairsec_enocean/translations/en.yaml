@@ -26,3 +26,15 @@ configuration:
   log_level:
     name: Log level
     description: debug shows every raw radio telegram.
+  mqtt_host:
+    name: External MQTT broker
+    description: Optional. Address of a broker outside Home Assistant (e.g. 192.168.1.20). Empty = broker provided by Home Assistant (Mosquitto add-on).
+  mqtt_port:
+    name: External broker port
+    description: Port of the external broker (default 1883). Ignored without an external broker.
+  mqtt_user:
+    name: MQTT user
+    description: User of the external broker. Empty = anonymous connection.
+  mqtt_password:
+    name: MQTT password
+    description: Password of the external broker.
