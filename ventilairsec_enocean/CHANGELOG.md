@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.0
+
+- Appairage : l'add-on répond aux demandes d'appairage (trames UTE) de la VMI configurée
+  quand elle ne lui envoie rien (pas encore appairée), au plus une fois toutes les
+  10 minutes. Couper puis rallumer la VMI suffit à l'appairer avec une nouvelle clé (voir
+  *Appairer la VMI*). Nouvelle option `accept_pairing`,
+  activée par défaut. Testé sur une PureVent jamais reliée à Jeedom : une commande envoyée
+  pendant le mode appairage restait sans effet, la réponse UTE l'a appairée.
+- `log_level: debug` journalise aussi les trames reçues de la VMI et de l'Assistant (brutes),
+  comme l'annonçait la documentation.
+
 ## 1.2.0
 
 - Nouvelles options `mqtt_host`, `mqtt_port`, `mqtt_user` et `mqtt_password` : broker

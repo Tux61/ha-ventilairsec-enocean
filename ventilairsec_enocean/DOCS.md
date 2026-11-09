@@ -248,8 +248,9 @@ les 10 minutes).
 | `sender_id` | ID d'émission des commandes. Vide = Base ID de la clé (comportement de Jeedom). |
 | `force_base_id` | Écrit un Base ID dans la clé au démarrage (voir plus bas). |
 | `sync_clock` | Envoie l'heure à la VMI au démarrage puis toutes les heures. Elle n'a pas de pile et revient en 2018 à chaque coupure de courant. |
+| `accept_pairing` | Répond aux demandes d'appairage de la VMI configurée (voir *Appairer la VMI*). Activé par défaut. |
 | `topic_prefix` | Préfixe des topics MQTT. |
-| `log_level` | `debug` affiche toutes les trames radio brutes. |
+| `log_level` | `debug` affiche toutes les trames radio brutes, reçues et émises. |
 | `mqtt_host` | Broker MQTT externe (hors Home Assistant), par exemple `192.168.1.20`. Vide = broker de l'add-on *Mosquitto broker*. |
 | `mqtt_port` | Port du broker externe (1883 par défaut). |
 | `mqtt_user`, `mqtt_password` | Identifiants du broker externe. Vides = connexion anonyme. |
@@ -280,9 +281,27 @@ Comparez-le avec le Base ID affiché au démarrage de l'add-on :
   - Faire émettre la nouvelle clé comme l'ancienne avec `force_base_id`. Le Base ID
     est l'`actionid` arrondi au multiple de 0x80 inférieur (par exemple `FF8A1200`
     pour un `actionid` `FF8A1201`). Mettez ensuite l'`actionid` dans `sender_id`.
-  - Réappairer la VMI avec le Base ID de la nouvelle clé : mettre la VMI en mode
-    appairage (procédure Ventilairsec), puis envoyer une commande depuis Home
-    Assistant, par exemple changer le mode.
+  - Réappairer la VMI avec le Base ID de la nouvelle clé (voir *Appairer la VMI*).
+
+## Appairer la VMI
+
+Nécessaire avec une nouvelle clé, ou pour une VMI qui n'a jamais été reliée à une box :
+sans appairage, elle ne parle qu'à son Assistant, et l'add-on ne reçoit ni ses mesures
+ni l'effet de ses commandes.
+
+1. Laissez `accept_pairing` activé (par défaut) et l'add-on démarré.
+2. Coupez la VMI au disjoncteur une dizaine de secondes, puis remettez le courant. Elle
+   passe en mode appairage et diffuse une demande d'appairage (trame UTE) par minute ;
+   certaines VMI restent ensuite dans ce mode en permanence, sans conséquence.
+3. L'add-on répond aussitôt « appairage accepté » depuis son identifiant d'émission :
+   ligne « Demande d'appairage de la VMI : réponse… » dans le journal. La VMI envoie
+   alors tout son état à l'add-on, et les entités se remplissent.
+4. Vérifiez en changeant le mode depuis Home Assistant.
+
+L'add-on ne répond qu'à la VMI configurée (`vmi_id`), au plus une fois toutes les
+10 minutes, et seulement si elle ne lui a rien envoyé depuis 15 minutes : une VMI déjà
+appairée lui écrit au moins toutes les 10 minutes et ne reçoit donc plus de réponse. Envoyer une commande pendant le mode appairage ne suffit pas : c'est la
+réponse à la demande d'appairage qui compte.
 
 ## Option `force_base_id`
 
@@ -324,8 +343,8 @@ trou dans les graphiques. Pour placer la clé, visez mieux que −85 dBm. Éloig
 des boîtiers métalliques et de la box, une rallonge USB aide souvent.
 
 Une VMI restée en mode appairage diffuse une demande d'appairage (trame UTE) par
-minute. L'add-on n'y répond pas, mais s'en sert pour mesurer le signal (ligne
-« Signal VMI (trame d'appairage) » dans le journal).
+minute. Au-delà de la réponse (voir *Appairer la VMI*), l'add-on s'en sert pour mesurer
+le signal (ligne « Signal VMI (trame d'appairage) » dans le journal).
 
 ## Remplacement de l'agenda Jeedom
 

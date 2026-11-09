@@ -20,6 +20,9 @@ configuration:
   sync_clock:
     name: Synchroniser l'horloge
     description: Envoie l'heure à la VMI au démarrage puis toutes les heures (elle la perd à chaque coupure de courant).
+  accept_pairing:
+    name: Accepter l'appairage
+    description: Répond aux demandes d'appairage de la VMI (après sa mise sous tension) tant qu'elle n'est pas appairée, pour qu'elle obéisse aux commandes. Seule la VMI configurée est concernée.
   topic_prefix:
     name: Préfixe MQTT
     description: Début des topics MQTT publiés.

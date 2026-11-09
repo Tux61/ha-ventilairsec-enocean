@@ -20,6 +20,9 @@ configuration:
   sync_clock:
     name: Clock sync
     description: Sends the time to the unit at startup and every hour (it loses it on every power cut).
+  accept_pairing:
+    name: Accept pairing
+    description: Answers the unit's pairing requests (after it is powered on) while it is not paired, so that it obeys commands. Only the configured unit is concerned.
   topic_prefix:
     name: MQTT prefix
     description: Prefix of the published MQTT topics.

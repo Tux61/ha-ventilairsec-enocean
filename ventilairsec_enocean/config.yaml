@@ -1,5 +1,5 @@
 name: Ventilairsec VMI EnOcean
-version: "1.2.0"
+version: "1.3.0"
 slug: ventilairsec_enocean
 description: Pilotage d'une VMI Ventilairsec PureVent via une clé EnOcean (TCM310) et MQTT, sans Jeedom
 url: https://github.com/Tux61/ha-ventilairsec-enocean
@@ -21,6 +21,7 @@ options:
   sender_id: ""
   force_base_id: ""
   sync_clock: true
+  accept_pairing: true
   topic_prefix: ventilairsec
   log_level: info
   mqtt_host: ""
@@ -35,6 +36,7 @@ schema:
   sender_id: match(^\s*([0-9A-Fa-f]{8})?\s*$)
   force_base_id: match(^\s*([Ff][Ff][89A-Fa-f][0-9A-Fa-f]{3}[08]0)?\s*$)
   sync_clock: bool
+  accept_pairing: bool?
   topic_prefix: str
   log_level: list(debug|info|warning|error)
   mqtt_host: str?
