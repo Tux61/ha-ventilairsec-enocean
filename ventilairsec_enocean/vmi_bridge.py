@@ -39,6 +39,11 @@ RORG_MSC = 0xD1
 RORG_CDM = 0x40  # télégramme chaîné (message long découpé en morceaux)
 RORG_UTE = 0xD4  # demande d'appairage (une VMI restée en mode appairage en diffuse une par minute)
 MANUFACTURER = 0x079
+# Réponse aux demandes d'appairage de la VMI (accept_pairing) : au plus une par intervalle, et
+# seulement si la VMI n'a rien adressé à l'add-on depuis UTE_SILENCE (appairée, elle lui écrit au
+# moins toutes les 10 min, mais reste en mode appairage plusieurs heures et répète sa demande)
+UTE_INTERVALLE = 600
+UTE_SILENCE = 900
 # Le signal radio passe à « indisponible » après 30 min sans trame (VMI : une trame par minute
 # environ, Assistant : toutes les 10 min) : un silence radio se voit comme un trou dans les graphiques.
 RSSI_EXPIRE = 1800
@@ -140,9 +145,9 @@ class ESP3:
         self._send(PT_COMMON_COMMAND, [CO_WR_RESET], timeout=2)
         time.sleep(2)
 
-    def send_radio(self, rorg, payload, sender_hex):
-        data = bytes([rorg]) + bytes(payload) + bytes.fromhex(sender_hex) + bytes([0x80])
-        optional = bytes([0x03, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00])
+    def send_radio(self, rorg, payload, sender_hex, destination_hex="FFFFFFFF", status=0x80):
+        data = bytes([rorg]) + bytes(payload) + bytes.fromhex(sender_hex) + bytes([status])
+        optional = bytes([0x03]) + bytes.fromhex(destination_hex) + bytes([0xFF, 0x00])
         resp = self._send(PT_RADIO_ERP1, data, optional)
         if resp is None:
             log.error("Pas de réponse de la clé à l'émission")
@@ -257,6 +262,15 @@ ERREURS = {
     0x70: "Multiples erreurs", 0x81: "Problème communication bypass",
     0x82: "Problème communication bypass", 0x83: "Volet du bypass bloqué",
 }
+
+
+def ute_attend_reponse(payload):
+    """Demande d'appairage UTE (DB6..DB0) qui attend une réponse : commande 0 (teach-in query),
+    type de requête 00 (appairage) ou 10 (appairage ou retrait), bit 6 à 0 (réponse attendue)."""
+    if len(payload) != 7:
+        return False
+    db6 = payload[0]
+    return db6 & 0x0F == 0 and not db6 & 0x40 and (db6 >> 4) & 0x03 in (0, 2)
 
 
 def on_off(v):
@@ -453,6 +467,8 @@ class Bridge:
         self.state[("vmi", "cle_probleme")] = "OFF"
         self.state[("vmi", "cle_incident")] = "Aucun"
         self.dernier_incident = 0
+        self.derniere_reponse_ute = 0
+        self.dernier_rx_pour_nous = 0
         self.announced = set()
         self.stop = threading.Event()
         self.mqtt = self._make_mqtt()
@@ -643,9 +659,18 @@ class Bridge:
             log.debug("Trame d'un autre équipement %s (RORG %02X) : %s", sender, rorg, data.hex())
             return
         if rorg == RORG_UTE:
-            # Ignorée, mais son niveau de réception compte : une VMI en mode appairage en diffuse
-            # une par minute, ce qui donne une mesure du signal par minute (utile pour placer la clé)
-            log.debug("Demande d'appairage de %s ignorée : %s", sender, data.hex())
+            # Une VMI en mode appairage (après sa mise sous tension) en diffuse une par minute.
+            # Avec accept_pairing, on y répond aussitôt si elle n'est pas encore appairée avec
+            # l'add-on : elle apprend alors l'identifiant d'émission et obéit aux commandes. Son
+            # niveau de réception donne aussi une mesure du signal par minute (utile pour placer la clé).
+            now = time.time()
+            if (sender == self.vmi_id and self.opts.get("accept_pairing", True) and ute_attend_reponse(payload)
+                    and now - self.derniere_reponse_ute > UTE_INTERVALLE
+                    and now - self.dernier_rx_pour_nous > UTE_SILENCE):
+                self.derniere_reponse_ute = now
+                threading.Thread(target=self.repondre_appairage, args=(payload,), daemon=True).start()
+            else:
+                log.debug("Demande d'appairage de %s ignorée : %s", sender, data.hex())
             if sender == self.vmi_id and rssi is not None:
                 log.info("Signal VMI (trame d'appairage) : %s dBm", rssi)
                 self.state[("vmi", "rssi")] = rssi
@@ -655,8 +680,11 @@ class Bridge:
         if rorg != RORG_MSC or len(payload) < 2 or get_bits(payload, 0, 12) != MANUFACTURER:
             log.info("Trame non décodée de %s (RORG %02X, dest %s) : %s", sender, rorg, dest, data.hex())
             return
+        log.debug("RX brut de %s (dest %s) : %s", sender, dest, data.hex())
         cmd = payload[1] & 0x0F
         dev = "vmi" if sender == self.vmi_id else "assistant"
+        if dev == "vmi" and dest == self.sender_id:
+            self.dernier_rx_pour_nous = time.time()
         if dev == "vmi" and dest == self.assistant_id:
             log.info("Trame VMI -> Assistant (cmd=%d) ignorée : %s", cmd, payload.hex())
             return
@@ -715,6 +743,16 @@ class Bridge:
         if self.esp.send_radio(RORG_MSC, payload, self.sender_id):
             return True
         self.incident("La clé n'a pas confirmé une émission : elle est peut-être lue par un autre programme")
+        return False
+
+    def repondre_appairage(self, query):
+        # Réponse UTE : bidirectionnelle, « appairage accepté », commande 1 (réponse), puis
+        # les champs de la demande recopiés (canaux, fabricant, profil). Adressée à la VMI.
+        payload = bytes([0x91]) + bytes(query[1:7])
+        log.info("Demande d'appairage de la VMI : réponse « appairage accepté » depuis %s", self.sender_id)
+        if self.esp.send_radio(RORG_UTE, payload, self.sender_id, destination_hex=self.vmi_id, status=0x00):
+            return True
+        self.incident("La clé n'a pas confirmé la réponse d'appairage")
         return False
 
     def send_clock(self):
